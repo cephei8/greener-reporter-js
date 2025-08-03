@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  ci_build:
+    name: (CI) Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Extract reporter package version
+        working-directory: greener_reporter
+        run: |
+          export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
+          echo "GREENER_REPORTER_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
+
+      - name: Extract servermock package version
+        working-directory: greener_servermock
+        run: |
+          export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
+          echo "GREENER_SERVERMOCK_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
+
+      - name: Verify reporter and servermock version
+        run: |
+          if [ "$GREENER_REPORTER_PKG_VERSION" != "$GREENER_SERVERMOCK_PKG_VERSION" ]; then
+            echo "Error: reporter and servermock must have the same version"
+            exit 1
+          fi
+
+      - name: Extract reporter version
+        run: |
+          export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
+          echo "GREENER_REPORTER_VERSION=$GREENER_REPORTER_VERSION" >> "$GITHUB_ENV"
+
+      - name: Download reporter includes/libs
+        run: |
+          export GREENER_REPORTER_RELEASE=https://github.com/cephei8/greener-reporter/releases/download/$GREENER_REPORTER_VERSION
+          wget $GREENER_REPORTER_RELEASE/greener-reporter-include.tar.gz
+          wget $GREENER_REPORTER_RELEASE/greener-reporter-lib-linux-x64.tar.gz
+          wget $GREENER_REPORTER_RELEASE/greener-servermock-include.tar.gz
+          wget $GREENER_REPORTER_RELEASE/greener-servermock-lib-linux-x64.tar.gz
+
+          mkdir -p greener_reporter/dist/include
+          mkdir -p greener_reporter/dist/lib/linux-x64
+          mkdir -p greener_servermock/dist/include
+          mkdir -p greener_servermock/dist/lib/linux-x64
+
+          tar -xzf ./greener-reporter-include.tar.gz -C greener_reporter/dist/include
+          tar -xzf ./greener-reporter-lib-linux-x64.tar.gz -C greener_reporter/dist/lib/linux-x64
+          tar -xzf ./greener-servermock-include.tar.gz -C greener_servermock/dist/include
+          tar -xzf ./greener-servermock-lib-linux-x64.tar.gz -C greener_servermock/dist/lib/linux-x64
+
+      - run: npm pack ../greener_reporter
+        working-directory: tests
+
+      - run: npm pack ../greener_servermock
+        working-directory: tests
+
+      - run: npm i
+        working-directory: tests
+
+      - run: npm test
+        working-directory: tests

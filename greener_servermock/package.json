@@ -1,0 +1,32 @@
+{
+  "name": "greener-servermock",
+  "version": "0.0.4",
+  "homepage": "https://cephei8.github.io/greener",
+  "license": "Apache-2.0",
+  "description": "JavaScript binding for Greener Servermock",
+  "main": "index.js",
+  "files": [
+    "/addon",
+    "/dist",
+    "/LICENSE",
+    "/README.md",
+    "/binding.gyp",
+    "/index.js",
+    "/package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cephei8/greener-reporter-js.git",
+    "directory": "greener_servermock"
+  },
+  "binary": {
+    "napi_versions": [ 9 ]
+  },
+  "dependencies": {
+    "bindings": "~1.5.0"
+  },
+  "gypfile": true,
+  "devDependencies": {
+    "cmake-js": "^7.3.0"
+  }
+}

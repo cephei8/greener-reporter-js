@@ -1,0 +1,181 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release_build:
+    name: (Release) Build packages on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target_name: linux-x64
+          - os: windows-latest
+            target_name: win-x64
+          - os: macos-13
+            target_name: mac-x64
+          - os: macos-14
+            target_name: mac-arm64
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - if: matrix.target_name == 'mac-x64'
+        name: Verify hardware platform
+        run: if [[ $(uname -m | tr -d '[:space:]') != "x86_64" ]]; then exit 1; fi
+
+      - if: matrix.target_name == 'mac-arm64'
+        name: Verify hardware platform
+        run: if [[ $(uname -m | tr -d '[:space:]') != "arm64" ]]; then exit 1; fi
+
+      - uses: actions/checkout@v5
+
+      - name: Extract reporter version
+        run: |
+          export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
+          echo "GREENER_REPORTER_VERSION=$GREENER_REPORTER_VERSION" >> "$GITHUB_ENV"
+
+      - name: Download reporter includes/libs
+        run: |
+          export GREENER_REPORTER_RELEASE=https://github.com/cephei8/greener-reporter/releases/download/$GREENER_REPORTER_VERSION
+          curl -L -O $GREENER_REPORTER_RELEASE/greener-reporter-include.tar.gz
+          curl -L -O $GREENER_REPORTER_RELEASE/greener-reporter-lib-${{ matrix.target_name }}.tar.gz
+          curl -L -O $GREENER_REPORTER_RELEASE/greener-servermock-include.tar.gz
+          curl -L -O $GREENER_REPORTER_RELEASE/greener-servermock-lib-${{ matrix.target_name }}.tar.gz
+
+          mkdir -p greener_reporter/dist/include
+          mkdir -p greener_reporter/dist/lib/${{ matrix.target_name }}
+          mkdir -p greener_servermock/dist/include
+          mkdir -p greener_servermock/dist/lib/${{ matrix.target_name }}
+
+          tar -xzf ./greener-reporter-include.tar.gz -C greener_reporter/dist/include
+          tar -xzf ./greener-reporter-lib-${{ matrix.target_name }}.tar.gz -C greener_reporter/dist/lib/${{ matrix.target_name }}
+          tar -xzf ./greener-servermock-include.tar.gz -C greener_servermock/dist/include
+          tar -xzf ./greener-servermock-lib-${{ matrix.target_name }}.tar.gz -C greener_servermock/dist/lib/${{ matrix.target_name }}
+
+      - name: Test
+        working-directory: tests
+        run: |
+          npm pack ../greener_reporter
+          npm pack ../greener_servermock
+          npm i
+          npm test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: greener-reporter-lib-${{ matrix.target_name }}.tar.gz
+          path: greener-reporter-lib-${{ matrix.target_name }}.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: greener-servermock-lib-${{ matrix.target_name }}.tar.gz
+          path: greener-servermock-lib-${{ matrix.target_name }}.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  release_create:
+    name: (Release) Create release
+    needs: release_build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    environment: npm
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Extract reporter package version
+        working-directory: greener_reporter
+        run: |
+          export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
+          echo "GREENER_REPORTER_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
+
+      - name: Extract servermock package version
+        working-directory: greener_servermock
+        run: |
+          export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
+          echo "GREENER_SERVERMOCK_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
+
+      - name: Verify reporter and servermock version
+        run: |
+          if [ "$GREENER_REPORTER_PKG_VERSION" != "$GREENER_SERVERMOCK_PKG_VERSION" ]; then
+            echo "Error: reporter and servermock must have the same version"
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v5
+        with:
+          path: reporter_tars
+          merge-multiple: true
+
+      - name: Download reporter includes
+        run: |
+          export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
+          export GREENER_REPORTER_RELEASE=https://github.com/cephei8/greener-reporter/releases/download/$GREENER_REPORTER_VERSION
+          curl -L -o reporter_tars/greener-reporter-include.tar.gz $GREENER_REPORTER_RELEASE/greener-reporter-include.tar.gz
+          curl -L -o reporter_tars/greener-servermock-include.tar.gz $GREENER_REPORTER_RELEASE/greener-servermock-include.tar.gz
+
+      - name: Prepare includes/libs
+        run: |
+          mkdir -p greener_reporter/dist/include
+          mkdir -p greener_reporter/dist/lib/linux-x64
+          mkdir -p greener_reporter/dist/lib/win-x64
+          mkdir -p greener_reporter/dist/lib/mac-x64
+          mkdir -p greener_reporter/dist/lib/mac-arm64
+
+          mkdir -p greener_servermock/dist/include
+          mkdir -p greener_servermock/dist/lib/linux-x64
+          mkdir -p greener_servermock/dist/lib/win-x64
+          mkdir -p greener_servermock/dist/lib/mac-x64
+          mkdir -p greener_servermock/dist/lib/mac-arm64
+
+          tar -xzf ./reporter_tars/greener-reporter-include.tar.gz -C greener_reporter/dist/include
+          tar -xzf ./reporter_tars/greener-reporter-lib-linux-x64.tar.gz -C greener_reporter/dist/lib/linux-x64
+          tar -xzf ./reporter_tars/greener-reporter-lib-win-x64.tar.gz -C greener_reporter/dist/lib/win-x64
+          tar -xzf ./reporter_tars/greener-reporter-lib-mac-x64.tar.gz -C greener_reporter/dist/lib/mac-x64
+          tar -xzf ./reporter_tars/greener-reporter-lib-mac-arm64.tar.gz -C greener_reporter/dist/lib/mac-arm64
+
+          tar -xzf ./reporter_tars/greener-servermock-include.tar.gz -C greener_servermock/dist/include
+          tar -xzf ./reporter_tars/greener-servermock-lib-linux-x64.tar.gz -C greener_servermock/dist/lib/linux-x64
+          tar -xzf ./reporter_tars/greener-servermock-lib-win-x64.tar.gz -C greener_servermock/dist/lib/win-x64
+          tar -xzf ./reporter_tars/greener-servermock-lib-mac-x64.tar.gz -C greener_servermock/dist/lib/mac-x64
+          tar -xzf ./reporter_tars/greener-servermock-lib-mac-arm64.tar.gz -C greener_servermock/dist/lib/mac-arm64
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'latest'
+
+      - run: npm install -g npm@latest
+
+      - run: |
+          npm i
+          npm pack
+        working-directory: greener_reporter
+
+      - run: |
+          npm i
+          npm pack
+        working-directory: greener_servermock
+
+      - name: Create release
+        run: |
+          gh release create v${{ env.GREENER_REPORTER_PKG_VERSION }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Publish reporter
+        run: |
+          npm publish --access=public ./greener_reporter/greener-reporter-${{ env.GREENER_REPORTER_PKG_VERSION }}.tgz
+
+      - name: Publish servermock
+        run: |
+          npm publish --access=public ./greener_servermock/greener-servermock-${{ env.GREENER_SERVERMOCK_PKG_VERSION }}.tgz

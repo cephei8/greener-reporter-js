@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/greener_reporter"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/greener_servermock"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/tests"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

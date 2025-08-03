@@ -1,0 +1,14 @@
+set dotenv-load
+
+
+default: build
+
+
+build:
+  npx cmake-js build -O cmake-build-debug
+
+rebuild:
+  npx cmake-js rebuild -O cmake-build-debug
+
+compile:
+  npx cmake-js compile -O cmake-build-debug
