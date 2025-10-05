@@ -150,7 +150,7 @@ jobs:
           tar -xzf ./reporter_tars/greener-servermock-lib-mac-x64.tar.gz -C greener_servermock/dist/lib/mac-x64
           tar -xzf ./reporter_tars/greener-servermock-lib-mac-arm64.tar.gz -C greener_servermock/dist/lib/mac-arm64
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 'latest'
 
