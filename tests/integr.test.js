@@ -9,6 +9,7 @@ const fixtureNames = new Servermock().fixtureNames();
 describe.each(fixtureNames)('fixture test [%s]', (fixtureName) => {
     const ctx = {
         servermock: undefined,
+        port: undefined,
         serverAddress: undefined,
         apiToken: undefined,
         calls: undefined,
@@ -22,10 +23,7 @@ describe.each(fixtureNames)('fixture test [%s]', (fixtureName) => {
         ctx.responses = ctx.servermock.fixtureResponses(fixtureName);
 
         ctx.servermock.serve(ctx.responses);
-        const port = ctx.servermock.getPort();
-
-        process.env.GREENER_INGRESS_ENDPOINT = "http://localhost:" + port;
-        process.env.GREENER_INGRESS_API_KEY = "some-api-token";
+        ctx.port = ctx.servermock.getPort();
     });
 
     afterEach(() => {
@@ -36,7 +34,7 @@ describe.each(fixtureNames)('fixture test [%s]', (fixtureName) => {
         const calls = JSON.parse(ctx.calls);
         const responses = JSON.parse(ctx.responses);
 
-        const reporter = new Reporter();
+        const reporter = new Reporter("http://localhost:" + ctx.port, "some-api-key");
 
         for (let i = 0; i < calls.calls.length; i++) {
             const c = calls.calls[i];
@@ -45,43 +43,15 @@ describe.each(fixtureNames)('fixture test [%s]', (fixtureName) => {
                 const r = responses.createSessionResponse;
                 const baggage = c.payload.baggage != null ? JSON.stringify(c.payload.baggage) : null;
 
-                if(c.payload.id != null) {
-                    process.env.GREENER_SESSION_ID = c.payload.id;
-                }
-                if(c.payload.description != null) {
-                    process.env.GREENER_SESSION_DESCRIPTION = c.payload.description;
-                }
-                if(baggage != null) {
-                    process.env.GREENER_SESSION_BAGGAGE = baggage;
-                }
-                if(c.payload.labels != null) {
-                    process.env.GREENER_SESSION_LABELS = c.payload.labels;
-                }
-
-                try {
-                    if (r.status === 'success') {
-                        const session = reporter.createSession();
-                        expect(session.id).toBe(r.payload.id);
-                    } else if (r.status === 'error') {
-                        expect(() => {
-                            reporter.createSession();
-                        }).toThrow(new Error(`GreenerReporterError ${r.payload.code}/${r.payload.ingressCode}: failed session request: ${r.payload.message}`));
-                    } else {
-                        throw new Error('unknown response status: ' + r.status);
-                    }
-                } finally {
-                    if(c.payload.id != null) {
-                        delete process.env.GREENER_SESSION_ID;
-                    }
-                    if(c.payload.description != null) {
-                        delete process.env.GREENER_SESSION_DESCRIPTION;
-                    }
-                    if(baggage != null) {
-                        delete process.env.GREENER_SESSION_BAGGAGE;
-                    }
-                    if(c.payload.labels != null) {
-                        delete process.env.GREENER_SESSION_LABELS;
-                    }
+                if (r.status === 'success') {
+                    const session = reporter.createSession(c.payload.id, c.payload.description, baggage, c.payload.labels);
+                    expect(session.id).toBe(r.payload.id);
+                } else if (r.status === 'error') {
+                    expect(() => {
+                        reporter.createSession(c.payload.id, c.payload.description, baggage, c.payload.labels);
+                    }).toThrow(new Error(`GreenerReporterError ${r.payload.code}/${r.payload.ingressCode}: failed session request: ${r.payload.message}`));
+                } else {
+                    throw new Error('unknown response status: ' + r.status);
                 }
 
             } else if (c.func === 'report') {

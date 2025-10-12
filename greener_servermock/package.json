@@ -1,6 +1,6 @@
 {
   "name": "greener-servermock",
-  "version": "0.0.7",
+  "version": "1.0.0",
   "homepage": "https://cephei8.github.io/greener",
   "license": "Apache-2.0",
   "description": "JavaScript binding for Greener Servermock",
