@@ -12,12 +12,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target_name: linux-x64
+            prebuild_target_name: linux-x64
           - os: windows-latest
             target_name: win-x64
+            prebuild_target_name: win32-x64
           - os: macos-13
             target_name: mac-x64
+            prebuild_target_name: darwin-x64
           - os: macos-14
             target_name: mac-arm64
+            prebuild_target_name: darwin-arm64
     defaults:
       run:
         shell: bash
@@ -33,6 +37,10 @@ jobs:
 
       - uses: actions/checkout@v5
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
       - name: Extract reporter version
         run: |
           export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
@@ -46,31 +54,45 @@ jobs:
           curl -L -O $GREENER_REPORTER_RELEASE/greener-servermock-include.tar.gz
           curl -L -O $GREENER_REPORTER_RELEASE/greener-servermock-lib-${{ matrix.target_name }}.tar.gz
 
-          mkdir -p greener_reporter/dist/include
-          mkdir -p greener_reporter/dist/lib/${{ matrix.target_name }}
-          mkdir -p greener_servermock/dist/include
-          mkdir -p greener_servermock/dist/lib/${{ matrix.target_name }}
+          mkdir -p greener-reporter/dist/include
+          mkdir -p greener-reporter/dist/lib/${{ matrix.target_name }}
+          mkdir -p greener-servermock/dist/include
+          mkdir -p greener-servermock/dist/lib/${{ matrix.target_name }}
 
-          tar -xzf ./greener-reporter-include.tar.gz -C greener_reporter/dist/include
-          tar -xzf ./greener-reporter-lib-${{ matrix.target_name }}.tar.gz -C greener_reporter/dist/lib/${{ matrix.target_name }}
-          tar -xzf ./greener-servermock-include.tar.gz -C greener_servermock/dist/include
-          tar -xzf ./greener-servermock-lib-${{ matrix.target_name }}.tar.gz -C greener_servermock/dist/lib/${{ matrix.target_name }}
-
+          tar -xzf ./greener-reporter-include.tar.gz -C greener-reporter/dist/include
+          tar -xzf ./greener-reporter-lib-${{ matrix.target_name }}.tar.gz -C greener-reporter/dist/lib/${{ matrix.target_name }}
+          tar -xzf ./greener-servermock-include.tar.gz -C greener-servermock/dist/include
+          tar -xzf ./greener-servermock-lib-${{ matrix.target_name }}.tar.gz -C greener-servermock/dist/lib/${{ matrix.target_name }}
+  
       - name: Test
         working-directory: tests
         run: |
-          npm pack ../greener_reporter
-          npm pack ../greener_servermock
+          npm pack ../greener-reporter
+          npm pack ../greener-servermock
           npm i
           npm test
 
+      - name: Prebuild reporter addon
+        working-directory: greener-reporter
+        run: |
+          npm i
+          npx prebuildify --napi --strip
+          mv prebuilds/${{ matrix.prebuild_target_name }}/greener-reporter.node prebuilds/greener-reporter-${{ matrix.prebuild_target_name }}.node 
+
+      - name: Prebuild servermock addon
+        working-directory: greener-servermock
+        run: |
+          npm i
+          npx prebuildify --napi --strip
+          mv prebuilds/${{ matrix.prebuild_target_name }}/greener-servermock.node prebuilds/greener-servermock-${{ matrix.prebuild_target_name }}.node 
+          
       - uses: actions/upload-artifact@v4
         with:
           name: greener-reporter-lib-${{ matrix.target_name }}.tar.gz
           path: greener-reporter-lib-${{ matrix.target_name }}.tar.gz
           if-no-files-found: error
           retention-days: 1
-
+ 
       - uses: actions/upload-artifact@v4
         with:
           name: greener-servermock-lib-${{ matrix.target_name }}.tar.gz
@@ -78,6 +100,20 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: greener-reporter-${{ matrix.prebuild_target_name }}.node
+          path: greener-reporter/prebuilds/greener-reporter-${{ matrix.prebuild_target_name }}.node
+          if-no-files-found: error
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: greener-servermock-${{ matrix.prebuild_target_name }}.node
+          path: greener-servermock/prebuilds/greener-servermock-${{ matrix.prebuild_target_name }}.node
+          if-no-files-found: error
+          retention-days: 1
+          
   release_create:
     name: (Release) Create release
     needs: release_build
@@ -92,15 +128,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-
+ 
       - name: Extract reporter package version
-        working-directory: greener_reporter
+        working-directory: greener-reporter
         run: |
           export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
           echo "GREENER_REPORTER_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
 
       - name: Extract servermock package version
-        working-directory: greener_servermock
+        working-directory: greener-servermock
         run: |
           export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
           echo "GREENER_SERVERMOCK_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
@@ -124,32 +160,53 @@ jobs:
           curl -L -o reporter_tars/greener-reporter-include.tar.gz $GREENER_REPORTER_RELEASE/greener-reporter-include.tar.gz
           curl -L -o reporter_tars/greener-servermock-include.tar.gz $GREENER_REPORTER_RELEASE/greener-servermock-include.tar.gz
 
-      - name: Prepare includes/libs
+      - name: Prepare includes/libs/prebuilds
         run: |
-          mkdir -p greener_reporter/dist/include
-          mkdir -p greener_reporter/dist/lib/linux-x64
-          mkdir -p greener_reporter/dist/lib/win-x64
-          mkdir -p greener_reporter/dist/lib/mac-x64
-          mkdir -p greener_reporter/dist/lib/mac-arm64
+          mkdir -p greener-reporter/dist/include
+          mkdir -p greener-reporter/dist/lib/linux-x64
+          mkdir -p greener-reporter/dist/lib/win-x64
+          mkdir -p greener-reporter/dist/lib/mac-x64
+          mkdir -p greener-reporter/dist/lib/mac-arm64
 
-          mkdir -p greener_servermock/dist/include
-          mkdir -p greener_servermock/dist/lib/linux-x64
-          mkdir -p greener_servermock/dist/lib/win-x64
-          mkdir -p greener_servermock/dist/lib/mac-x64
-          mkdir -p greener_servermock/dist/lib/mac-arm64
+          mkdir -p greener-servermock/dist/include
+          mkdir -p greener-servermock/dist/lib/linux-x64
+          mkdir -p greener-servermock/dist/lib/win-x64
+          mkdir -p greener-servermock/dist/lib/mac-x64
+          mkdir -p greener-servermock/dist/lib/mac-arm64
 
-          tar -xzf ./reporter_tars/greener-reporter-include.tar.gz -C greener_reporter/dist/include
-          tar -xzf ./reporter_tars/greener-reporter-lib-linux-x64.tar.gz -C greener_reporter/dist/lib/linux-x64
-          tar -xzf ./reporter_tars/greener-reporter-lib-win-x64.tar.gz -C greener_reporter/dist/lib/win-x64
-          tar -xzf ./reporter_tars/greener-reporter-lib-mac-x64.tar.gz -C greener_reporter/dist/lib/mac-x64
-          tar -xzf ./reporter_tars/greener-reporter-lib-mac-arm64.tar.gz -C greener_reporter/dist/lib/mac-arm64
+          tar -xzf ./reporter_tars/greener-reporter-include.tar.gz -C greener-reporter/dist/include
+          tar -xzf ./reporter_tars/greener-reporter-lib-linux-x64.tar.gz -C greener-reporter/dist/lib/linux-x64
+          tar -xzf ./reporter_tars/greener-reporter-lib-win-x64.tar.gz -C greener-reporter/dist/lib/win-x64
+          tar -xzf ./reporter_tars/greener-reporter-lib-mac-x64.tar.gz -C greener-reporter/dist/lib/mac-x64
+          tar -xzf ./reporter_tars/greener-reporter-lib-mac-arm64.tar.gz -C greener-reporter/dist/lib/mac-arm64
 
-          tar -xzf ./reporter_tars/greener-servermock-include.tar.gz -C greener_servermock/dist/include
-          tar -xzf ./reporter_tars/greener-servermock-lib-linux-x64.tar.gz -C greener_servermock/dist/lib/linux-x64
-          tar -xzf ./reporter_tars/greener-servermock-lib-win-x64.tar.gz -C greener_servermock/dist/lib/win-x64
-          tar -xzf ./reporter_tars/greener-servermock-lib-mac-x64.tar.gz -C greener_servermock/dist/lib/mac-x64
-          tar -xzf ./reporter_tars/greener-servermock-lib-mac-arm64.tar.gz -C greener_servermock/dist/lib/mac-arm64
+          tar -xzf ./reporter_tars/greener-servermock-include.tar.gz -C greener-servermock/dist/include
+          tar -xzf ./reporter_tars/greener-servermock-lib-linux-x64.tar.gz -C greener-servermock/dist/lib/linux-x64
+          tar -xzf ./reporter_tars/greener-servermock-lib-win-x64.tar.gz -C greener-servermock/dist/lib/win-x64
+          tar -xzf ./reporter_tars/greener-servermock-lib-mac-x64.tar.gz -C greener-servermock/dist/lib/mac-x64
+          tar -xzf ./reporter_tars/greener-servermock-lib-mac-arm64.tar.gz -C greener-servermock/dist/lib/mac-arm64
 
+
+          mkdir -p greener-reporter/prebuilds/linux-x64
+          mkdir -p greener-reporter/prebuilds/win32-x64
+          mkdir -p greener-reporter/prebuilds/darwin-x64
+          mkdir -p greener-reporter/prebuilds/darwin-arm64
+
+          mkdir -p greener-servermock/prebuilds/linux-x64
+          mkdir -p greener-servermock/prebuilds/win32-x64
+          mkdir -p greener-servermock/prebuilds/darwin-x64
+          mkdir -p greener-servermock/prebuilds/darwin-arm64
+
+          mv reporter_tars/greener-reporter-linux-x64.node greener-reporter/prebuilds/linux-x64/greener-reporter.node 
+          mv reporter_tars/greener-reporter-win32-x64.node greener-reporter/prebuilds/win32-x64/greener-reporter.node 
+          mv reporter_tars/greener-reporter-darwin-x64.node greener-reporter/prebuilds/darwin-x64/greener-reporter.node 
+          mv reporter_tars/greener-reporter-darwin-arm64.node greener-reporter/prebuilds/darwin-arm64/greener-reporter.node 
+
+          mv reporter_tars/greener-servermock-linux-x64.node greener-servermock/prebuilds/linux-x64/greener-servermock.node 
+          mv reporter_tars/greener-servermock-win32-x64.node greener-servermock/prebuilds/win32-x64/greener-servermock.node 
+          mv reporter_tars/greener-servermock-darwin-x64.node greener-servermock/prebuilds/darwin-x64/greener-servermock.node 
+          mv reporter_tars/greener-servermock-darwin-arm64.node greener-servermock/prebuilds/darwin-arm64/greener-servermock.node 
+          
       - uses: actions/setup-node@v5
         with:
           node-version: 'latest'
@@ -159,12 +216,12 @@ jobs:
       - run: |
           npm i
           npm pack
-        working-directory: greener_reporter
+        working-directory: greener-reporter
 
       - run: |
           npm i
           npm pack
-        working-directory: greener_servermock
+        working-directory: greener-servermock
 
       - name: Create release
         run: |
@@ -174,8 +231,8 @@ jobs:
 
       - name: Publish reporter
         run: |
-          npm publish --access=public ./greener_reporter/greener-reporter-${{ env.GREENER_REPORTER_PKG_VERSION }}.tgz
+          npm publish --access=public ./greener-reporter/greener-reporter-${{ env.GREENER_REPORTER_PKG_VERSION }}.tgz
 
       - name: Publish servermock
         run: |
-          npm publish --access=public ./greener_servermock/greener-servermock-${{ env.GREENER_SERVERMOCK_PKG_VERSION }}.tgz
+          npm publish --access=public ./greener-servermock/greener-servermock-${{ env.GREENER_SERVERMOCK_PKG_VERSION }}.tgz
