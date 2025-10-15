@@ -15,13 +15,13 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Extract reporter package version
-        working-directory: greener_reporter
+        working-directory: greener-reporter
         run: |
           export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
           echo "GREENER_REPORTER_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
 
       - name: Extract servermock package version
-        working-directory: greener_servermock
+        working-directory: greener-servermock
         run: |
           export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
           echo "GREENER_SERVERMOCK_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
@@ -46,20 +46,20 @@ jobs:
           wget $GREENER_REPORTER_RELEASE/greener-servermock-include.tar.gz
           wget $GREENER_REPORTER_RELEASE/greener-servermock-lib-linux-x64.tar.gz
 
-          mkdir -p greener_reporter/dist/include
-          mkdir -p greener_reporter/dist/lib/linux-x64
-          mkdir -p greener_servermock/dist/include
-          mkdir -p greener_servermock/dist/lib/linux-x64
+          mkdir -p greener-reporter/dist/include
+          mkdir -p greener-reporter/dist/lib/linux-x64
+          mkdir -p greener-servermock/dist/include
+          mkdir -p greener-servermock/dist/lib/linux-x64
 
-          tar -xzf ./greener-reporter-include.tar.gz -C greener_reporter/dist/include
-          tar -xzf ./greener-reporter-lib-linux-x64.tar.gz -C greener_reporter/dist/lib/linux-x64
-          tar -xzf ./greener-servermock-include.tar.gz -C greener_servermock/dist/include
-          tar -xzf ./greener-servermock-lib-linux-x64.tar.gz -C greener_servermock/dist/lib/linux-x64
+          tar -xzf ./greener-reporter-include.tar.gz -C greener-reporter/dist/include
+          tar -xzf ./greener-reporter-lib-linux-x64.tar.gz -C greener-reporter/dist/lib/linux-x64
+          tar -xzf ./greener-servermock-include.tar.gz -C greener-servermock/dist/include
+          tar -xzf ./greener-servermock-lib-linux-x64.tar.gz -C greener-servermock/dist/lib/linux-x64
 
-      - run: npm pack ../greener_reporter
+      - run: npm pack ../greener-reporter
         working-directory: tests
 
-      - run: npm pack ../greener_servermock
+      - run: npm pack ../greener-servermock
         working-directory: tests
 
       - run: npm i

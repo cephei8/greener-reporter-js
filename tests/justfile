@@ -8,6 +8,6 @@ prepare:
   if compgen -G greener-reporter-*.tgz > /dev/null; then rm greener-reporter-*.tgz; fi
   if compgen -G greener-servermock-*.tgz > /dev/null; then rm greener-servermock-*.tgz; fi
 
-  npm pack ../greener_reporter
-  npm pack ../greener_servermock
+  npm pack ../greener-reporter
+  npm pack ../greener-servermock
   npm i
