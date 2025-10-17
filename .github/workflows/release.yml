@@ -46,6 +46,12 @@ jobs:
           export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
           echo "GREENER_REPORTER_VERSION=$GREENER_REPORTER_VERSION" >> "$GITHUB_ENV"
 
+      - name: Extract reporter package version
+        working-directory: greener-reporter
+        run: |
+          export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
+          echo "GREENER_REPORTER_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
+          
       - name: Download reporter includes/libs
         run: |
           export GREENER_REPORTER_RELEASE=https://github.com/cephei8/greener-reporter/releases/download/$GREENER_REPORTER_VERSION
@@ -64,28 +70,33 @@ jobs:
           tar -xzf ./greener-servermock-include.tar.gz -C greener-servermock/dist/include
           tar -xzf ./greener-servermock-lib-${{ matrix.target_name }}.tar.gz -C greener-servermock/dist/lib/${{ matrix.target_name }}
   
-      - name: Test
-        working-directory: tests
-        run: |
-          npm pack ../greener-reporter
-          npm pack ../greener-servermock
-          npm i
-          npm test
-
       - name: Prebuild reporter addon
         working-directory: greener-reporter
         run: |
           npm i
           npx prebuildify --napi --strip
-          mv prebuilds/${{ matrix.prebuild_target_name }}/greener-reporter.node prebuilds/greener-reporter-${{ matrix.prebuild_target_name }}.node 
+          npm pack
 
       - name: Prebuild servermock addon
         working-directory: greener-servermock
         run: |
           npm i
           npx prebuildify --napi --strip
-          mv prebuilds/${{ matrix.prebuild_target_name }}/greener-servermock.node prebuilds/greener-servermock-${{ matrix.prebuild_target_name }}.node 
+          npm pack
           
+      - name: Test
+        working-directory: tests
+        run: |
+          cp ../greener-reporter/greener-reporter-$GREENER_REPORTER_PKG_VERSION.tgz .
+          cp ../greener-servermock/greener-servermock-$GREENER_REPORTER_PKG_VERSION.tgz .
+          npm i
+          npm test
+
+      - name: Move prebuild addons for upload
+        run: |
+          mv greener-reporter/prebuilds/${{ matrix.prebuild_target_name }}/greener-reporter.node greener-reporter/prebuilds/greener-reporter-${{ matrix.prebuild_target_name }}.node 
+          mv greener-servermock/prebuilds/${{ matrix.prebuild_target_name }}/greener-servermock.node greener-servermock/prebuilds/greener-servermock-${{ matrix.prebuild_target_name }}.node 
+
       - uses: actions/upload-artifact@v4
         with:
           name: greener-reporter-lib-${{ matrix.target_name }}.tar.gz
