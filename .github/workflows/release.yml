@@ -225,11 +225,13 @@ jobs:
       - run: npm install -g npm@latest
 
       - run: |
+          npm pkg set gypfile=false --json
           npm i
           npm pack
         working-directory: greener-reporter
 
       - run: |
+          npm pkg set gypfile=false --json
           npm i
           npm pack
         working-directory: greener-servermock
