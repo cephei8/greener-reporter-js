@@ -1,15 +1,15 @@
 {
-  "name": "greener-reporter-tests",
-  "version": "0.0.0",
-  "scripts": {
-    "test": "jest"
-  },
-  "description": "",
-  "private": true,
-  "devDependencies": {
-    "@jest/globals": "^30.0.5",
-    "jest": "^30.0.5",
-    "greener-reporter": "file:greener-reporter-1.1.3.tgz",
-    "greener-servermock": "file:greener-servermock-1.1.3.tgz"
-  }
+    "name": "greener-reporter-tests",
+    "version": "0.0.0",
+    "scripts": {
+        "test": "jest"
+    },
+    "description": "",
+    "private": true,
+    "devDependencies": {
+        "@jest/globals": "^30.0.5",
+        "jest": "^30.0.5",
+        "greener-reporter": "file:greener-reporter-1.2.0.tgz",
+        "greener-servermock": "file:greener-servermock-1.2.0.tgz"
+    }
 }
