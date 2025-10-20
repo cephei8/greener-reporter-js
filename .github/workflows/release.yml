@@ -211,7 +211,7 @@ jobs:
           mv reporter_tars/greener-servermock-darwin-x64.node greener-servermock/prebuilds/darwin-x64/greener-servermock.node 
           mv reporter_tars/greener-servermock-darwin-arm64.node greener-servermock/prebuilds/darwin-arm64/greener-servermock.node
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: "latest"
 
