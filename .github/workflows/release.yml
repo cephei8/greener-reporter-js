@@ -152,7 +152,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           path: reporter_tars
           merge-multiple: true
