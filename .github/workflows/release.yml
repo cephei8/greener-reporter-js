@@ -2,6 +2,16 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      test_release:
+        description: 'Test release mode (skips creating release and publishing)'
+        required: false
+        type: boolean
+        default: false
+      test_release_version:
+        description: 'Test release version (required if test_release is true)'
+        required: false
+        type: string
 
 jobs:
   release_build:
@@ -32,13 +42,24 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Validate test release inputs
+        run: |
+          if [ "${{ inputs.test_release }}" == "true" ] && [ -z "${{ inputs.test_release_version }}" ]; then
+            echo "Error: test_release_version must be specified when test_release is true"
+            exit 1
+          fi
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
 
       - name: Extract reporter version
         run: |
-          export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
+          if [ "${{ inputs.test_release }}" == "true" ]; then
+            export GREENER_REPORTER_VERSION="${{ inputs.test_release_version }}"
+          else
+            export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
+          fi
           echo "GREENER_REPORTER_VERSION=$GREENER_REPORTER_VERSION" >> "$GITHUB_ENV"
 
       - name: Extract reporter package version
@@ -133,6 +154,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Validate test release inputs
+        run: |
+          if [ "${{ inputs.test_release }}" == "true" ] && [ -z "${{ inputs.test_release_version }}" ]; then
+            echo "Error: test_release_version must be specified when test_release is true"
+            exit 1
+          fi
+
       - name: Extract reporter package version
         working-directory: greener-reporter
         run: |
@@ -159,7 +187,11 @@ jobs:
 
       - name: Download reporter includes
         run: |
-          export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
+          if [ "${{ inputs.test_release }}" == "true" ]; then
+            export GREENER_REPORTER_VERSION="${{ inputs.test_release_version }}"
+          else
+            export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
+          fi
           export GREENER_REPORTER_RELEASE=https://github.com/cephei8/greener-reporter/releases/download/$GREENER_REPORTER_VERSION
           curl -L -o reporter_tars/greener-reporter-include.tar.gz $GREENER_REPORTER_RELEASE/greener-reporter-include.tar.gz
           curl -L -o reporter_tars/greener-servermock-include.tar.gz $GREENER_REPORTER_RELEASE/greener-servermock-include.tar.gz
@@ -228,15 +260,18 @@ jobs:
         working-directory: greener-servermock
 
       - name: Create release
+        if: ${{ inputs.test_release != true }}
         run: |
           gh release create v${{ env.GREENER_REPORTER_PKG_VERSION }}
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Publish reporter
+        if: ${{ inputs.test_release != true }}
         run: |
           npm publish --access=public ./greener-reporter/greener-reporter-${{ env.GREENER_REPORTER_PKG_VERSION }}.tgz
 
       - name: Publish servermock
+        if: ${{ inputs.test_release != true }}
         run: |
           npm publish --access=public ./greener-servermock/greener-servermock-${{ env.GREENER_SERVERMOCK_PKG_VERSION }}.tgz
