@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       test_release:
@@ -271,7 +272,7 @@ jobs:
           npm i
           npm pack
         working-directory: greener-servermock
-
+      - run: exit 1
       - name: Create release
         if: ${{ inputs.test_release != true }}
         run: |
