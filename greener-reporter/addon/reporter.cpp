@@ -1,10 +1,6 @@
 #include "reporter.hpp"
 
-#ifdef __cplusplus
-extern "C" {
 #include <greener_reporter/greener_reporter.h>
-}
-#endif
 
 #include <cstring>
 #include <iostream>
@@ -14,7 +10,7 @@ extern "C" {
 #include <string>
 
 namespace {
-void handle_reporter_error(napi_env env, const greener_reporter_error_t *err) {
+void handle_reporter_error(napi_env env, const greener_reporter_error *err) {
   std::stringstream ss;
   ss << "GreenerReporterError " << err->code << "/" << err->ingress_code << ": "
      << err->message;
@@ -41,7 +37,7 @@ void handle_napi_error(napi_env env) {
 
 reporter::~reporter() {
   if (reporter_) {
-    const greener_reporter_error_t *err;
+    const greener_reporter_error *err;
     greener_reporter_delete(reporter_, &err);
   }
   napi_delete_reference(env_, wrapper_);
@@ -185,7 +181,7 @@ napi_value reporter::ctor(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
-  const greener_reporter_error_t *err;
+  const greener_reporter_error *err;
   obj->reporter_ =
       greener_reporter_new(server_address.c_str(), api_key.c_str(), &err);
   if (err != nullptr) {
@@ -348,11 +344,11 @@ napi_value reporter::create_session(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
-  auto session_deleter = [](const greener_reporter_session_t *s) {
+  auto session_deleter = [](const greener_reporter_session *s) {
     greener_reporter_session_delete(s);
   };
-  const greener_reporter_error_t *err;
-  std::unique_ptr<const greener_reporter_session_t, decltype(session_deleter)>
+  const greener_reporter_error *err;
+  std::unique_ptr<const greener_reporter_session, decltype(session_deleter)>
       session(greener_reporter_session_create(
                   obj->reporter_,
                   in_session_id.has_value() ? in_session_id.value().c_str()
@@ -669,7 +665,7 @@ napi_value reporter::create_testcase(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
-  const greener_reporter_error_t *err;
+  const greener_reporter_error *err;
   greener_reporter_testcase_create(
       obj->reporter_, in_session_id.c_str(), in_testcase_name.c_str(),
       in_testcase_classname.has_value() ? in_testcase_classname.value().c_str()
@@ -711,7 +707,7 @@ napi_value reporter::shutdown(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
-  const greener_reporter_error_t *err;
+  const greener_reporter_error *err;
   greener_reporter_delete(obj->reporter_, &err);
   obj->reporter_ = nullptr;
 
