@@ -1,10 +1,6 @@
 #include "servermock.hpp"
 
-#ifdef __cplusplus
-extern "C" {
 #include <greener_servermock/greener_servermock.h>
-}
-#endif
 
 #include <cstring>
 #include <iostream>
@@ -14,7 +10,7 @@ extern "C" {
 
 namespace {
 void handle_servermock_error(napi_env env,
-                             const greener_servermock_error_t *err) {
+                             const greener_servermock_error *err) {
   std::stringstream ss;
   ss << "GreenerServermockError: " << err->message;
   const std::string &msg = ss.str();
@@ -38,7 +34,7 @@ void handle_napi_error(napi_env env) {
 
 servermock::~servermock() {
   if (servermock_) {
-    const greener_servermock_error_t *err;
+    const greener_servermock_error *err;
     greener_servermock_delete(servermock_, &err);
   }
   napi_delete_reference(env_, wrapper_);
@@ -196,7 +192,7 @@ napi_value servermock::serve(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
-  const greener_servermock_error_t *err;
+  const greener_servermock_error *err;
   greener_servermock_serve(obj->servermock_, in_responses.c_str(), &err);
 
   if (err != nullptr) {
@@ -255,7 +251,7 @@ napi_value servermock::assert_calls(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
-  const greener_servermock_error_t *err;
+  const greener_servermock_error *err;
   greener_servermock_assert(obj->servermock_, calls_str.c_str(), &err);
 
   if (err != nullptr) {
@@ -289,7 +285,7 @@ napi_value servermock::fixture_names(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
-  const greener_servermock_error_t *err;
+  const greener_servermock_error *err;
   const char **name_ptrs;
   uint32_t num_names;
   greener_servermock_fixture_names(obj->servermock_, &name_ptrs, &num_names,
@@ -378,7 +374,7 @@ napi_value servermock::fixture_calls(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
-  const greener_servermock_error_t *err;
+  const greener_servermock_error *err;
   const char *calls;
   greener_servermock_fixture_calls(obj->servermock_, fixture_name.c_str(),
                                    &calls, &err);
@@ -448,7 +444,7 @@ napi_value servermock::fixture_responses(napi_env env,
     return nullptr;
   }
 
-  const greener_servermock_error_t *err;
+  const greener_servermock_error *err;
   const char *responses;
   greener_servermock_fixture_responses(obj->servermock_, fixture_name.c_str(),
                                        &responses, &err);
@@ -492,7 +488,7 @@ napi_value servermock::shutdown(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
-  const greener_servermock_error_t *err;
+  const greener_servermock_error *err;
   greener_servermock_delete(obj->servermock_, &err);
   obj->servermock_ = nullptr;
 
@@ -527,7 +523,7 @@ napi_value servermock::get_port(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
-  const greener_servermock_error_t *err;
+  const greener_servermock_error *err;
   int port = greener_servermock_get_port(obj->servermock_, &err);
 
   if (err != nullptr) {

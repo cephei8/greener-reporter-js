@@ -42,9 +42,9 @@ jobs:
         run: |
           export GREENER_REPORTER_RELEASE=https://github.com/cephei8/greener-reporter/releases/download/$GREENER_REPORTER_VERSION
           wget $GREENER_REPORTER_RELEASE/greener-reporter-include.tar.gz
-          wget $GREENER_REPORTER_RELEASE/greener-reporter-lib-x86_64-linux-gnu.tar.gz
+          wget $GREENER_REPORTER_RELEASE/greener-reporter-lib-linux-x64.tar.gz
           wget $GREENER_REPORTER_RELEASE/greener-servermock-include.tar.gz
-          wget $GREENER_REPORTER_RELEASE/greener-servermock-lib-x86_64-linux-gnu.tar.gz
+          wget $GREENER_REPORTER_RELEASE/greener-servermock-lib-linux-x64.tar.gz
 
           mkdir -p greener-reporter/dist/include
           mkdir -p greener-reporter/dist/lib/linux-x64
@@ -52,9 +52,9 @@ jobs:
           mkdir -p greener-servermock/dist/lib/linux-x64
 
           tar -xzf ./greener-reporter-include.tar.gz -C greener-reporter/dist/include
-          tar -xzf ./greener-reporter-lib-x86_64-linux-gnu.tar.gz -C greener-reporter/dist/lib/linux-x64
+          tar -xzf ./greener-reporter-lib-linux-x64.tar.gz -C greener-reporter/dist/lib/linux-x64
           tar -xzf ./greener-servermock-include.tar.gz -C greener-servermock/dist/include
-          tar -xzf ./greener-servermock-lib-x86_64-linux-gnu.tar.gz -C greener-servermock/dist/lib/linux-x64
+          tar -xzf ./greener-servermock-lib-linux-x64.tar.gz -C greener-servermock/dist/lib/linux-x64
 
       - run: |
           npm i
