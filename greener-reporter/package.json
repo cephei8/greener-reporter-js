@@ -1,13 +1,12 @@
 {
     "name": "greener-reporter",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "author": "cephei8",
     "homepage": "https://cephei8.github.io/greener",
     "license": "Apache-2.0",
     "description": "JavaScript binding for Greener Reporter",
     "main": "index.js",
     "files": [
-        "/dist",
         "/LICENSE",
         "/README.md",
         "/index.js",

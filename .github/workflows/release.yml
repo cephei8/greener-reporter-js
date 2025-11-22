@@ -65,17 +65,47 @@ jobs:
           tar -xzf ./greener-servermock-include.tar.gz -C greener-servermock/dist/include
           tar -xzf ./greener-servermock-lib-${{ matrix.target_name }}.tar.gz -C greener-servermock/dist/lib/${{ matrix.target_name }}
 
-      - name: Prebuild reporter addon
+      - name: Prepare reporter prebuilds directory and copy libraries
         working-directory: greener-reporter
         run: |
-          npx prebuildify --napi --strip
-          npm pack
+          mkdir -p prebuilds/${{ matrix.prebuild_target_name }}
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            cp dist/lib/${{ matrix.target_name }}/libgreener_reporter.dylib prebuilds/${{ matrix.prebuild_target_name }}/
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            cp dist/lib/${{ matrix.target_name }}/libgreener_reporter.so prebuilds/${{ matrix.prebuild_target_name }}/
+          elif [ "${{ runner.os }}" = "Windows" ]; then
+            cp dist/lib/${{ matrix.target_name }}/greener_reporter.dll prebuilds/${{ matrix.prebuild_target_name }}/
+            cp dist/lib/${{ matrix.target_name }}/greener_reporter.lib prebuilds/${{ matrix.prebuild_target_name }}/ || true
+          fi
+
+      - name: Prebuild reporter addon
+        working-directory: greener-reporter
+        run: npx prebuildify --napi --strip
+
+      - name: Pack reporter
+        working-directory: greener-reporter
+        run: npm pack
+
+      - name: Prepare servermock prebuilds directory and copy libraries
+        working-directory: greener-servermock
+        run: |
+          mkdir -p prebuilds/${{ matrix.prebuild_target_name }}
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            cp dist/lib/${{ matrix.target_name }}/libgreener_servermock.dylib prebuilds/${{ matrix.prebuild_target_name }}/
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            cp dist/lib/${{ matrix.target_name }}/libgreener_servermock.so prebuilds/${{ matrix.prebuild_target_name }}/
+          elif [ "${{ runner.os }}" = "Windows" ]; then
+            cp dist/lib/${{ matrix.target_name }}/greener_servermock.dll prebuilds/${{ matrix.prebuild_target_name }}/
+            cp dist/lib/${{ matrix.target_name }}/greener_servermock.lib prebuilds/${{ matrix.prebuild_target_name }}/ || true
+          fi
 
       - name: Prebuild servermock addon
         working-directory: greener-servermock
-        run: |
-          npx prebuildify --napi --strip
-          npm pack
+        run: npx prebuildify --napi --strip
+
+      - name: Pack servermock
+        working-directory: greener-servermock
+        run: npm pack
 
       - name: Test
         working-directory: tests
@@ -201,15 +231,25 @@ jobs:
           mkdir -p greener-servermock/prebuilds/darwin-x64
           mkdir -p greener-servermock/prebuilds/darwin-arm64
 
-          mv reporter_tars/greener-reporter-linux-x64.node greener-reporter/prebuilds/linux-x64/greener-reporter.node 
-          mv reporter_tars/greener-reporter-win32-x64.node greener-reporter/prebuilds/win32-x64/greener-reporter.node 
-          mv reporter_tars/greener-reporter-darwin-x64.node greener-reporter/prebuilds/darwin-x64/greener-reporter.node 
-          mv reporter_tars/greener-reporter-darwin-arm64.node greener-reporter/prebuilds/darwin-arm64/greener-reporter.node 
+          mv reporter_tars/greener-reporter-linux-x64.node greener-reporter/prebuilds/linux-x64/greener-reporter.node
+          mv reporter_tars/greener-reporter-win32-x64.node greener-reporter/prebuilds/win32-x64/greener-reporter.node
+          mv reporter_tars/greener-reporter-darwin-x64.node greener-reporter/prebuilds/darwin-x64/greener-reporter.node
+          mv reporter_tars/greener-reporter-darwin-arm64.node greener-reporter/prebuilds/darwin-arm64/greener-reporter.node
 
-          mv reporter_tars/greener-servermock-linux-x64.node greener-servermock/prebuilds/linux-x64/greener-servermock.node 
-          mv reporter_tars/greener-servermock-win32-x64.node greener-servermock/prebuilds/win32-x64/greener-servermock.node 
-          mv reporter_tars/greener-servermock-darwin-x64.node greener-servermock/prebuilds/darwin-x64/greener-servermock.node 
+          cp greener-reporter/dist/lib/linux-x64/libgreener_reporter.so greener-reporter/prebuilds/linux-x64/
+          cp greener-reporter/dist/lib/win-x64/greener_reporter.dll greener-reporter/prebuilds/win32-x64/
+          cp greener-reporter/dist/lib/mac-x64/libgreener_reporter.dylib greener-reporter/prebuilds/darwin-x64/
+          cp greener-reporter/dist/lib/mac-arm64/libgreener_reporter.dylib greener-reporter/prebuilds/darwin-arm64/
+
+          mv reporter_tars/greener-servermock-linux-x64.node greener-servermock/prebuilds/linux-x64/greener-servermock.node
+          mv reporter_tars/greener-servermock-win32-x64.node greener-servermock/prebuilds/win32-x64/greener-servermock.node
+          mv reporter_tars/greener-servermock-darwin-x64.node greener-servermock/prebuilds/darwin-x64/greener-servermock.node
           mv reporter_tars/greener-servermock-darwin-arm64.node greener-servermock/prebuilds/darwin-arm64/greener-servermock.node
+
+          cp greener-servermock/dist/lib/linux-x64/libgreener_servermock.so greener-servermock/prebuilds/linux-x64/
+          cp greener-servermock/dist/lib/win-x64/greener_servermock.dll greener-servermock/prebuilds/win32-x64/
+          cp greener-servermock/dist/lib/mac-x64/libgreener_servermock.dylib greener-servermock/prebuilds/darwin-x64/
+          cp greener-servermock/dist/lib/mac-arm64/libgreener_servermock.dylib greener-servermock/prebuilds/darwin-arm64/
 
       - uses: actions/setup-node@v6
         with:
