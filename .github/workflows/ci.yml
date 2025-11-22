@@ -56,17 +56,23 @@ jobs:
           tar -xzf ./greener-servermock-include.tar.gz -C greener-servermock/dist/include
           tar -xzf ./greener-servermock-lib-linux-x64.tar.gz -C greener-servermock/dist/lib/linux-x64
 
-      - run: |
-          npm i
-          npx prebuildify --napi --strip
-          npm pack
+      - name: Prepare reporter prebuilds and build
         working-directory: greener-reporter
-
-      - run: |
+        run: |
+          mkdir -p prebuilds/linux-x64
+          cp dist/lib/linux-x64/libgreener_reporter.so prebuilds/linux-x64/
           npm i
           npx prebuildify --napi --strip
           npm pack
+
+      - name: Prepare servermock prebuilds and build
         working-directory: greener-servermock
+        run: |
+          mkdir -p prebuilds/linux-x64
+          cp dist/lib/linux-x64/libgreener_servermock.so prebuilds/linux-x64/
+          npm i
+          npx prebuildify --napi --strip
+          npm pack
 
       - run: |
           cp ../greener-reporter/greener-reporter-$GREENER_REPORTER_PKG_VERSION.tgz .

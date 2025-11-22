@@ -9,7 +9,7 @@
     "devDependencies": {
         "@jest/globals": "^30.0.5",
         "jest": "^30.0.5",
-        "greener-reporter": "file:greener-reporter-1.4.0.tgz",
-        "greener-servermock": "file:greener-servermock-1.4.0.tgz"
+        "greener-reporter": "file:greener-reporter-1.5.0.tgz",
+        "greener-servermock": "file:greener-servermock-1.5.0.tgz"
     }
 }
