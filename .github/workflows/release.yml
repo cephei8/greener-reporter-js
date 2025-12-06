@@ -242,8 +242,10 @@ jobs:
 
       - name: Publish reporter
         run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm publish --access=public ./greener-reporter/greener-reporter-${{ env.GREENER_REPORTER_PKG_VERSION }}.tgz
 
       - name: Publish servermock
         run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm publish --access=public ./greener-servermock/greener-servermock-${{ env.GREENER_SERVERMOCK_PKG_VERSION }}.tgz
