@@ -9,6 +9,7 @@
 JavaScript library for implementing reporters for [Greener](https://sr.ht/~cephei8/greener/).<br>
 Binding for [Greener Reporter](https://git.sr.ht/~cephei8/greener-reporter).
 
+
 ## Contributing
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
