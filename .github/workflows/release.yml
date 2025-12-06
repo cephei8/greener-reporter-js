@@ -31,6 +31,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - uses: actions/setup-node@v6
         with:
@@ -47,36 +49,13 @@ jobs:
           export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
           echo "GREENER_REPORTER_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
 
-      - name: Download reporter includes/libs
+      - name: Build native libraries
+        run: ./build-native-libs.sh ${{ matrix.target_name }} ${{ matrix.prebuild_target_name }}
+
+      - name: Create release tars
         run: |
-          export GREENER_REPORTER_RELEASE=https://github.com/cephei8/greener-reporter/releases/download/$GREENER_REPORTER_VERSION
-          curl -L -O $GREENER_REPORTER_RELEASE/greener-reporter-include.tar.gz
-          curl -L -O $GREENER_REPORTER_RELEASE/greener-reporter-lib-${{ matrix.target_name }}.tar.gz
-          curl -L -O $GREENER_REPORTER_RELEASE/greener-servermock-include.tar.gz
-          curl -L -O $GREENER_REPORTER_RELEASE/greener-servermock-lib-${{ matrix.target_name }}.tar.gz
-
-          mkdir -p greener-reporter/dist/include
-          mkdir -p greener-reporter/dist/lib/${{ matrix.target_name }}
-          mkdir -p greener-servermock/dist/include
-          mkdir -p greener-servermock/dist/lib/${{ matrix.target_name }}
-
-          tar -xzf ./greener-reporter-include.tar.gz -C greener-reporter/dist/include
-          tar -xzf ./greener-reporter-lib-${{ matrix.target_name }}.tar.gz -C greener-reporter/dist/lib/${{ matrix.target_name }}
-          tar -xzf ./greener-servermock-include.tar.gz -C greener-servermock/dist/include
-          tar -xzf ./greener-servermock-lib-${{ matrix.target_name }}.tar.gz -C greener-servermock/dist/lib/${{ matrix.target_name }}
-
-      - name: Prepare reporter prebuilds directory and copy libraries
-        working-directory: greener-reporter
-        run: |
-          mkdir -p prebuilds/${{ matrix.prebuild_target_name }}
-          if [ "${{ runner.os }}" = "macOS" ]; then
-            cp dist/lib/${{ matrix.target_name }}/libgreener_reporter.dylib prebuilds/${{ matrix.prebuild_target_name }}/
-          elif [ "${{ runner.os }}" = "Linux" ]; then
-            cp dist/lib/${{ matrix.target_name }}/libgreener_reporter.so prebuilds/${{ matrix.prebuild_target_name }}/
-          elif [ "${{ runner.os }}" = "Windows" ]; then
-            cp dist/lib/${{ matrix.target_name }}/greener_reporter.dll prebuilds/${{ matrix.prebuild_target_name }}/
-            cp dist/lib/${{ matrix.target_name }}/greener_reporter.lib prebuilds/${{ matrix.prebuild_target_name }}/ || true
-          fi
+          tar -czf greener-reporter-lib-${{ matrix.target_name }}.tar.gz -C greener-reporter/dist/lib/${{ matrix.target_name }} .
+          tar -czf greener-servermock-lib-${{ matrix.target_name }}.tar.gz -C greener-servermock/dist/lib/${{ matrix.target_name }} .
 
       - name: Prebuild reporter addon
         working-directory: greener-reporter
@@ -85,19 +64,6 @@ jobs:
       - name: Pack reporter
         working-directory: greener-reporter
         run: npm pack
-
-      - name: Prepare servermock prebuilds directory and copy libraries
-        working-directory: greener-servermock
-        run: |
-          mkdir -p prebuilds/${{ matrix.prebuild_target_name }}
-          if [ "${{ runner.os }}" = "macOS" ]; then
-            cp dist/lib/${{ matrix.target_name }}/libgreener_servermock.dylib prebuilds/${{ matrix.prebuild_target_name }}/
-          elif [ "${{ runner.os }}" = "Linux" ]; then
-            cp dist/lib/${{ matrix.target_name }}/libgreener_servermock.so prebuilds/${{ matrix.prebuild_target_name }}/
-          elif [ "${{ runner.os }}" = "Windows" ]; then
-            cp dist/lib/${{ matrix.target_name }}/greener_servermock.dll prebuilds/${{ matrix.prebuild_target_name }}/
-            cp dist/lib/${{ matrix.target_name }}/greener_servermock.lib prebuilds/${{ matrix.prebuild_target_name }}/ || true
-          fi
 
       - name: Prebuild servermock addon
         working-directory: greener-servermock
@@ -162,6 +128,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: Extract reporter package version
         working-directory: greener-reporter
@@ -187,12 +155,11 @@ jobs:
           path: reporter_tars
           merge-multiple: true
 
-      - name: Download reporter includes
+      - name: Create include tars from submodule
+        working-directory: reporter_tars
         run: |
-          export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
-          export GREENER_REPORTER_RELEASE=https://github.com/cephei8/greener-reporter/releases/download/$GREENER_REPORTER_VERSION
-          curl -L -o reporter_tars/greener-reporter-include.tar.gz $GREENER_REPORTER_RELEASE/greener-reporter-include.tar.gz
-          curl -L -o reporter_tars/greener-servermock-include.tar.gz $GREENER_REPORTER_RELEASE/greener-servermock-include.tar.gz
+          tar -czf greener-reporter-include.tar.gz -C ../external/greener-reporter/dist/include greener_reporter
+          tar -czf greener-servermock-include.tar.gz -C ../external/greener-reporter/dist/include greener_servermock
 
       - name: Prepare includes/libs/prebuilds
         run: |
@@ -208,13 +175,13 @@ jobs:
           mkdir -p greener-servermock/dist/lib/mac-x64
           mkdir -p greener-servermock/dist/lib/mac-arm64
 
-          tar -xzf ./reporter_tars/greener-reporter-include.tar.gz -C greener-reporter/dist/include
+          cp -r external/greener-reporter/dist/include/greener_reporter greener-reporter/dist/include/
           tar -xzf ./reporter_tars/greener-reporter-lib-linux-x64.tar.gz -C greener-reporter/dist/lib/linux-x64
           tar -xzf ./reporter_tars/greener-reporter-lib-win-x64.tar.gz -C greener-reporter/dist/lib/win-x64
           tar -xzf ./reporter_tars/greener-reporter-lib-mac-x64.tar.gz -C greener-reporter/dist/lib/mac-x64
           tar -xzf ./reporter_tars/greener-reporter-lib-mac-arm64.tar.gz -C greener-reporter/dist/lib/mac-arm64
 
-          tar -xzf ./reporter_tars/greener-servermock-include.tar.gz -C greener-servermock/dist/include
+          cp -r external/greener-reporter/dist/include/greener_servermock greener-servermock/dist/include/
           tar -xzf ./reporter_tars/greener-servermock-lib-linux-x64.tar.gz -C greener-servermock/dist/lib/linux-x64
           tar -xzf ./reporter_tars/greener-servermock-lib-win-x64.tar.gz -C greener-servermock/dist/lib/win-x64
           tar -xzf ./reporter_tars/greener-servermock-lib-mac-x64.tar.gz -C greener-servermock/dist/lib/mac-x64
