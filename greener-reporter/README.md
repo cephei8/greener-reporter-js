@@ -1,0 +1,2 @@
+# Greener Reporter - JavaScript Binding
+
