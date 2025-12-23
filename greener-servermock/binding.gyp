@@ -35,7 +35,7 @@
     "targets": [
         {
             "target_name": "greener_servermock_addon",
-            "sources": ["addon/addon.cpp", "addon/servermock.cpp"],
+            "sources": ["addon/addon.c", "addon/servermock.c"],
             "libraries": ["-lgreener_servermock"]
         }
     ]

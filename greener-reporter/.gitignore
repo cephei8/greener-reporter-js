@@ -2,8 +2,9 @@
 
 /build
 /build-debug
-/cmake-build-debug
-/cmake-build-release
+
+/.cache
+/compile_commands.json
 
 /node_modules
 /package-lock.json

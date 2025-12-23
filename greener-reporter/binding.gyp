@@ -35,7 +35,7 @@
     "targets": [
         {
             "target_name": "greener_reporter_addon",
-            "sources": ["addon/addon.cpp", "addon/reporter.cpp"],
+            "sources": ["addon/addon.c", "addon/reporter.c"],
             "libraries": ["-lgreener_reporter"]
         }
     ]
