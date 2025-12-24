@@ -11,7 +11,14 @@ handle_servermock_error(napi_env env,
                         const struct greener_servermock_error *err) {
   char msg[512];
   snprintf(msg, sizeof(msg), "GreenerServermockError: %s", err->message);
-  napi_throw_error(env, NULL, msg);
+
+  napi_value msg_value;
+  napi_create_string_utf8(env, msg, NAPI_AUTO_LENGTH, &msg_value);
+
+  napi_value error;
+  napi_create_error(env, NULL, msg_value, &error);
+
+  napi_throw(env, error);
 }
 
 static void handle_napi_error(napi_env env) {
@@ -271,11 +278,22 @@ static napi_value servermock_assert_calls(napi_env env,
   greener_servermock_assert(obj->servermock, buf, &err);
 
   if (err != NULL) {
-    handle_servermock_error(env, err);
-    return NULL;
+    char msg[512];
+    snprintf(msg, sizeof(msg), "GreenerServermockError: %s", err->message);
+    greener_servermock_error_delete(err);
+
+    napi_value msg_value;
+    napi_create_string_utf8(env, msg, NAPI_AUTO_LENGTH, &msg_value);
+
+    napi_value error;
+    napi_create_error(env, NULL, msg_value, &error);
+
+    return error;
   }
 
-  return NULL;
+  napi_value undefined;
+  napi_get_undefined(env, &undefined);
+  return undefined;
 }
 
 static napi_value servermock_fixture_names(napi_env env,

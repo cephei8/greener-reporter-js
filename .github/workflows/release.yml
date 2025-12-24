@@ -4,104 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  release_build:
-    name: (Release) Build packages on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            target_name: linux-x64
-            prebuild_target_name: linux-x64
-          - os: ubuntu-24.04-arm
-            target_name: linux-arm64
-            prebuild_target_name: linux-arm64
-          - os: windows-latest
-            target_name: win-x64
-            prebuild_target_name: win32-x64
-          - os: macos-15-intel
-            target_name: mac-x64
-            prebuild_target_name: darwin-x64
-          - os: macos-15
-            target_name: mac-arm64
-            prebuild_target_name: darwin-arm64
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: recursive
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Extract reporter version
-        run: |
-          export GREENER_REPORTER_VERSION=$(cat DEP_VERSION_REPORTER | tr -d '[:space:]')
-          echo "GREENER_REPORTER_VERSION=$GREENER_REPORTER_VERSION" >> "$GITHUB_ENV"
-
-      - name: Extract reporter package version
-        working-directory: greener-reporter
-        run: |
-          export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
-          echo "GREENER_REPORTER_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
-
-      - name: Build native libraries
-        run: ./build-native-libs.sh ${{ matrix.target_name }} ${{ matrix.prebuild_target_name }}
-
-      - name: Create release tars
-        run: |
-          tar -czf greener-reporter-lib-${{ matrix.target_name }}.tar.gz -C greener-reporter/dist/lib/${{ matrix.target_name }} .
-          tar -czf greener-servermock-lib-${{ matrix.target_name }}.tar.gz -C greener-servermock/dist/lib/${{ matrix.target_name }} .
-
-      - name: Prebuild reporter addon
-        working-directory: greener-reporter
-        run: npx prebuildify --napi --strip
-
-      - name: Pack reporter
-        working-directory: greener-reporter
-        run: npm pack
-
-      - name: Prebuild servermock addon
-        working-directory: greener-servermock
-        run: npx prebuildify --napi --strip
-
-      - name: Pack servermock
-        working-directory: greener-servermock
-        run: npm pack
-
-      - name: Test
-        working-directory: tests
-        run: |
-          cp ../greener-reporter/greener-reporter-$GREENER_REPORTER_PKG_VERSION.tgz .
-          cp ../greener-servermock/greener-servermock-0.0.0.tgz .
-          npm i
-          npm test
-
-      - name: Move prebuild addons for upload
-        run: |
-          mv greener-reporter/prebuilds/${{ matrix.prebuild_target_name }}/greener-reporter.node greener-reporter/prebuilds/greener-reporter-${{ matrix.prebuild_target_name }}.node
-
-      - uses: actions/upload-artifact@v6
-        with:
-          name: greener-reporter-lib-${{ matrix.target_name }}.tar.gz
-          path: greener-reporter-lib-${{ matrix.target_name }}.tar.gz
-          if-no-files-found: error
-          retention-days: 1
-
-      - uses: actions/upload-artifact@v6
-        with:
-          name: greener-reporter-${{ matrix.prebuild_target_name }}.node
-          path: greener-reporter/prebuilds/greener-reporter-${{ matrix.prebuild_target_name }}.node
-          if-no-files-found: error
-          retention-days: 1
-
   release_create:
     name: (Release) Create release
-    needs: release_build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -120,46 +24,7 @@ jobs:
         working-directory: greener-reporter
         run: |
           export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
-          echo "GREENER_REPORTER_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
-
-      - uses: actions/download-artifact@v7
-        with:
-          path: reporter_tars
-          merge-multiple: true
-
-      - name: Create include tars from submodule
-        working-directory: reporter_tars
-        run: |
-          tar -czf greener-reporter-include.tar.gz -C ../external/greener-reporter/dist/include greener_reporter
-
-      - name: Prepare includes/libs/prebuilds
-        run: |
-          mkdir -p greener-reporter/dist/include
-          mkdir -p greener-reporter/dist/lib/linux-x64
-          mkdir -p greener-reporter/dist/lib/win-x64
-          mkdir -p greener-reporter/dist/lib/mac-x64
-          mkdir -p greener-reporter/dist/lib/mac-arm64
-
-          cp -r external/greener-reporter/dist/include/greener_reporter greener-reporter/dist/include/
-          tar -xzf ./reporter_tars/greener-reporter-lib-linux-x64.tar.gz -C greener-reporter/dist/lib/linux-x64
-          tar -xzf ./reporter_tars/greener-reporter-lib-win-x64.tar.gz -C greener-reporter/dist/lib/win-x64
-          tar -xzf ./reporter_tars/greener-reporter-lib-mac-x64.tar.gz -C greener-reporter/dist/lib/mac-x64
-          tar -xzf ./reporter_tars/greener-reporter-lib-mac-arm64.tar.gz -C greener-reporter/dist/lib/mac-arm64
-
-          mkdir -p greener-reporter/prebuilds/linux-x64
-          mkdir -p greener-reporter/prebuilds/win32-x64
-          mkdir -p greener-reporter/prebuilds/darwin-x64
-          mkdir -p greener-reporter/prebuilds/darwin-arm64
-
-          mv reporter_tars/greener-reporter-linux-x64.node greener-reporter/prebuilds/linux-x64/greener-reporter.node
-          mv reporter_tars/greener-reporter-win32-x64.node greener-reporter/prebuilds/win32-x64/greener-reporter.node
-          mv reporter_tars/greener-reporter-darwin-x64.node greener-reporter/prebuilds/darwin-x64/greener-reporter.node
-          mv reporter_tars/greener-reporter-darwin-arm64.node greener-reporter/prebuilds/darwin-arm64/greener-reporter.node
-
-          cp greener-reporter/dist/lib/linux-x64/libgreener_reporter.so greener-reporter/prebuilds/linux-x64/
-          cp greener-reporter/dist/lib/win-x64/greener_reporter.dll greener-reporter/prebuilds/win32-x64/
-          cp greener-reporter/dist/lib/mac-x64/libgreener_reporter.dylib greener-reporter/prebuilds/darwin-x64/
-          cp greener-reporter/dist/lib/mac-arm64/libgreener_reporter.dylib greener-reporter/prebuilds/darwin-arm64/
+          echo "GREENER_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v6
         with:
@@ -172,12 +37,30 @@ jobs:
           npm pack
         working-directory: greener-reporter
 
+      - run: ./build-servermock-native-lib.sh linux-x64 linux-x64
+
+      - name: Prebuild servermock addon
+        working-directory: greener-servermock
+        run: npx prebuildify --napi --strip
+
+      - name: Pack servermock
+        working-directory: greener-servermock
+        run: npm pack
+
+      - name: Test
+        working-directory: tests
+        run: |
+          cp ../greener-reporter/greener-reporter-$GREENER_PKG_VERSION.tgz .
+          cp ../greener-servermock/greener-servermock-0.0.0.tgz .
+          npm i
+          npm test
+
       - name: Create release
         run: |
-          gh release create v${{ env.GREENER_REPORTER_PKG_VERSION }}
+          gh release create v${{ env.GREENER_PKG_VERSION }}
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Publish reporter
         run: |
-          npm publish --access=public ./greener-reporter/greener-reporter-${{ env.GREENER_REPORTER_PKG_VERSION }}.tgz
+          npm publish --access=public ./greener-reporter/greener-reporter-${{ env.GREENER_PKG_VERSION }}.tgz

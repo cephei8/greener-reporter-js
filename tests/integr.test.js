@@ -1,12 +1,17 @@
-const {describe, expect, test, beforeEach, afterEach} = require('@jest/globals');
+const {
+    describe,
+    expect,
+    test,
+    beforeEach,
+    afterEach,
+} = require("@jest/globals");
 
-const {Reporter} = require('greener-reporter');
-const {Servermock} = require('greener-servermock');
+const { Reporter } = require("greener-reporter");
+const { Servermock } = require("greener-servermock");
 
 const fixtureNames = new Servermock().fixtureNames();
 
-
-describe.each(fixtureNames)('fixture test [%s]', (fixtureName) => {
+describe.each(fixtureNames)("fixture test [%s]", (fixtureName) => {
     const ctx = {
         servermock: undefined,
         port: undefined,
@@ -30,33 +35,52 @@ describe.each(fixtureNames)('fixture test [%s]', (fixtureName) => {
         ctx.servermock.shutdown();
     });
 
-    test('test name', () => {
+    test("test name", async () => {
         const calls = JSON.parse(ctx.calls);
         const responses = JSON.parse(ctx.responses);
 
-        const reporter = new Reporter("http://localhost:" + ctx.port, "some-api-key");
+        const reporter = new Reporter(
+            "http://localhost:" + ctx.port,
+            "some-api-key",
+        );
 
         for (let i = 0; i < calls.calls.length; i++) {
             const c = calls.calls[i];
 
-            if (c.func === 'createSession') {
+            if (c.func === "createSession") {
                 const r = responses.createSessionResponse;
-                const baggage = c.payload.baggage != null ? JSON.stringify(c.payload.baggage) : null;
+                const baggage =
+                    c.payload.baggage != null
+                        ? JSON.stringify(c.payload.baggage)
+                        : null;
 
-                if (r.status === 'success') {
-                    const session = reporter.createSession(c.payload.id, c.payload.description, baggage, c.payload.labels);
+                if (r.status === "success") {
+                    const session = await reporter.createSession(
+                        c.payload.id,
+                        c.payload.description,
+                        baggage,
+                        c.payload.labels,
+                    );
                     expect(session.id).toBe(r.payload.id);
-                } else if (r.status === 'error') {
-                    expect(() => {
-                        reporter.createSession(c.payload.id, c.payload.description, baggage, c.payload.labels);
-                    }).toThrow(new Error(`GreenerReporterError ${r.payload.code}/${r.payload.ingressCode}: failed session request: ${r.payload.message}`));
+                } else if (r.status === "error") {
+                    await expect(async () => {
+                        await reporter.createSession(
+                            c.payload.id,
+                            c.payload.description,
+                            baggage,
+                            c.payload.labels,
+                        );
+                    }).rejects.toThrow(
+                        new Error(
+                            `GreenerReporterError ${r.payload.code}/${r.payload.ingressCode}: ${r.payload.message}`,
+                        ),
+                    );
                 } else {
-                    throw new Error('unknown response status: ' + r.status);
+                    throw new Error("unknown response status: " + r.status);
                 }
-
-            } else if (c.func === 'report') {
+            } else if (c.func === "report") {
                 const r = responses.reportResponse;
-                if (r.status === 'success') {
+                if (r.status === "success") {
                     for (let p of c.payload.testcases) {
                         reporter.createTestcase(
                             p.sessionId,
@@ -66,35 +90,40 @@ describe.each(fixtureNames)('fixture test [%s]', (fixtureName) => {
                             p.testsuite,
                             p.status,
                             null,
-                            null
+                            null,
                         );
                     }
-                } else if (r.status === 'error') {
-                    expect(() => {
-                        for (let p of c.payload.testcases) {
-                            reporter.createTestcase(
-                                p.sessionId,
-                                p.testcaseName,
-                                p.testcaseClassname,
-                                p.testcaseFile,
-                                p.testsuite,
-                                p.status,
-                                null,
-                                null
-                            );
-                        }
-                    }).toThrow(new Error(`GreenerReporterError ${r.payload.code}/${r.payload.ingressCode}: ${r.payload.message}`));
+                } else if (r.status === "error") {
+                    for (let p of c.payload.testcases) {
+                        reporter.createTestcase(
+                            p.sessionId,
+                            p.testcaseName,
+                            p.testcaseClassname,
+                            p.testcaseFile,
+                            p.testsuite,
+                            p.status,
+                            null,
+                            null,
+                        );
+                    }
+                    await reporter.shutdown();
+                    const error = reporter.popError();
+                    expect(error).toBeTruthy();
+                    expect(error.message).toContain(
+                        `GreenerReporterError ${r.payload.code}/${r.payload.ingressCode}: ${r.payload.message}`,
+                    );
+                    await ctx.servermock.assert(ctx.calls);
+                    return;
                 } else {
-                    throw new Error('unknown response status: ' + r.status);
+                    throw new Error("unknown response status: " + r.status);
                 }
-
             } else {
-                throw new Error('unknown call func: ' + c.func);
+                throw new Error("unknown call func: " + c.func);
             }
         }
 
-        reporter.shutdown();
+        await reporter.shutdown();
 
-        ctx.servermock.assert(ctx.calls);
+        await ctx.servermock.assert(ctx.calls);
     });
 });
