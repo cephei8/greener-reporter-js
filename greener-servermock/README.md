@@ -1,1 +1,0 @@
-# Greener Servermock - JavaScript Binding

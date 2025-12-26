@@ -21,7 +21,6 @@ jobs:
           submodules: recursive
 
       - name: Extract reporter package version
-        working-directory: greener-reporter
         run: |
           export PKG_VERSION=$(npm pkg get version | sed 's/^["'\'']//; s/["'\'']$//')
           echo "GREENER_PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
@@ -35,7 +34,6 @@ jobs:
       - run: |
           npm i
           npm pack
-        working-directory: greener-reporter
 
       - run: ./build-servermock-native-lib.sh linux-x64 linux-x64
 
@@ -48,12 +46,7 @@ jobs:
         run: npm pack
 
       - name: Test
-        working-directory: tests
-        run: |
-          cp ../greener-reporter/greener-reporter-$GREENER_PKG_VERSION.tgz .
-          cp ../greener-servermock/greener-servermock-0.0.0.tgz .
-          npm i
-          npm test
+        run: npm test
 
       - name: Create release
         run: |
@@ -63,4 +56,4 @@ jobs:
 
       - name: Publish reporter
         run: |
-          npm publish --access=public ./greener-reporter/greener-reporter-${{ env.GREENER_PKG_VERSION }}.tgz
+          npm publish --access=public ./greener-reporter-${{ env.GREENER_PKG_VERSION }}.tgz

@@ -1,17 +1,12 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/greener-reporter"
+    directory: "/"
     schedule:
       interval: "weekly"
 
   - package-ecosystem: "npm"
     directory: "/greener-servermock"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "npm"
-    directory: "/tests"
     schedule:
       interval: "weekly"
 

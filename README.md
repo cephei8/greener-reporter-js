@@ -1,9 +1,12 @@
-# Greener Reporter - JavaScript Binding
+# Greener Reporter - JavaScript
 
 [![npm version](https://img.shields.io/npm/v/greener-reporter.svg)](https://www.npmjs.com/package/greener-reporter)
 
 JavaScript library for implementing reporters for [Greener](https://github.com/cephei8/greener).<br>
-Binding for [Greener Reporter](https://github.com/cephei8/greener-reporter).
+
+Used by test reporters for Greener:
+- Jest reporter: [jest-greener](https://github.com/cephei8/jest-greener)
+- Mocha reporter: [mocha-greener](https://github.com/cephei8/mocha-greener)
 
 ## Contributing
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
